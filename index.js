@@ -14,8 +14,6 @@ var fs = require('fs');
 
 var depsTree = require('./lib/depsTree');
 
-var requireStubSource = fs.readFileSync('requireStub.js', 'utf-8');
-
 var watcher = chokidar.watch([], {persistent: true})
   .on('change', buildAll)
   .on('unlink', buildAll)
@@ -142,7 +140,7 @@ combinedHtml += "var modules = {};\
 console.log(sinceLine);
 
 fs.writeFileSync('./index.html', combinedHtml + '\n' + sourceMap.comment() + '</script><style>' +
-  fs.readFileSync('./qp.css', 'utf-8') + 
+  // fs.readFileSync('./qp.css', 'utf-8') + 
   '</style></head><body><div id="container"></div><script>' +
   "document.body.onload = function () { loadModule('" + entryPath + "');};" +
   '</script></body></html>', 'utf-8');

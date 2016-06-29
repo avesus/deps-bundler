@@ -21,5 +21,14 @@
   "bugs": {
     "url": "https://github.com/avesus/deps-bundler/issues"
   },
-  "homepage": "https://github.com/avesus/deps-bundler#readme"
+  "homepage": "https://github.com/avesus/deps-bundler#readme",
+  "dependencies": {
+    "bluebird": "^3.4.1",
+    "chokidar": "^1.6.0",
+    "combine-source-map": "^0.7.2",
+    "deps-topo-sort": "^0.2.1",
+    "module-deps": "^4.0.7",
+    "optimist": "^0.6.1",
+    "ws": "^1.1.1"
+  }
 }
