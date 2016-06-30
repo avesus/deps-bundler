@@ -12,7 +12,7 @@ var chokidar = require('chokidar');
 var combineSourceMap = require('combine-source-map');
 var fs = require('fs');
 
-var depsTree = require('./lib/depsTree');
+var depsTree = require('./lib/deps-tree');
 
 var watcher = chokidar.watch([], {persistent: true})
   .on('change', buildAll)
