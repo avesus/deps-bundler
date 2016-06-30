@@ -1,5 +1,5 @@
-[![NPM version][npm-image]][npm-url] [![Gitter chat][gitter-image]][gitter-url]
-
+[![NPM version][npm-image]][npm-url]
+[![Gitter](https://badges.gitter.im/avesus/deps-bundler.svg)](https://gitter.im/avesus/deps-bundler?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![NPM][nodei-image]][nodei-url]
 
 # deps-bundler
@@ -16,12 +16,6 @@ Note: Work in progress, alpha-stability.
 
 [npm-url]: https://www.npmjs.com/package/deps-bundler
 [npm-image]: https://img.shields.io/npm/v/deps-bundler.svg
-
-
 [nodei-image]: https://nodei.co/npm/deps-bundler.png?downloads=true&downloadRank=true&stars=true
 [nodei-url]: https://www.npmjs.com/package/deps-bundler
-
-
-[gitter-url]: https://gitter.im/avesus/deps-bundler
-[gitter-image]: https://gitter.im/avesus/deps-bundler?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 
