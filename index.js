@@ -1,3 +1,18 @@
+// TODO: split functionality to building, completion notifying
+// and watching. With support of production builds without watches
+// and reload handlers.
+// Make all functionality available via API instead of running
+// a process. Make possibility to supply resulting bundle
+// in memory instead of thru a file.
+// Separate index.html bundling from core bundling,
+// allow externalize that functionality
+// (but support thru specifying source map offset -
+// position of JavaScript <script> code in HTML).
+// Remove reloading support into example, but make use
+// of API.
+// Use caching to prevent re-reading of files if nothing changed,
+// only track changed files.
+
 var argv = require('optimist').argv;
 
 if (!argv.entry) {
@@ -57,13 +72,12 @@ var source = fs.readFileSync(entryPath, 'utf-8');
 
 var sourceMap = combineSourceMap.create();
 
-function lineBreakCount(str){
-	/* counts \n */
-	try {
-		return((str.match(/[^\n]*\n[^\n]*/gi).length));
-	} catch(e) {
-		return 0;
-	}
+function lineBreakCount (str){
+  try {
+    return((str.match(/[^\n]*\n[^\n]*/gi).length));
+  } catch(e) {
+    return 0;
+  }
 }
 
 var combinedHtml = '<html><head><script>var modulesInfo = {\n';
