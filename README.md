@@ -23,5 +23,5 @@ Note: Work in progress, alpha-stability.
 
 
 [gitter-url]: https://gitter.im/avesus/deps-bundler
-[gitter-image]: https://img.shields.io/badge/gitter-deps-bundler%2Fdeps-bundler-brightgreen.svg
+[gitter-image]: https://gitter.im/avesus/deps-bundler?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge
 
