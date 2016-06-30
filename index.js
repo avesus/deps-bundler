@@ -46,13 +46,11 @@ var g_ws = undefined;
 
 function buildAll () {
   console.log('Rebuilding...');
+  watcher.unwatch(watchFileList);
 
   depsTree(entryPath)
     .then(function (deps) {
 
-      watcher.unwatch(watchFileList);
-      watcher.add(deps.files);
-      watchFileList = deps.files;
 
       build(deps);
 
@@ -61,6 +59,9 @@ function buildAll () {
       }
 
       console.log('Rebuild complete.');
+
+      watcher.add(deps.files);
+      watchFileList = deps.files;
     })
     .catch(function (err) {
       console.log('Error', err);
