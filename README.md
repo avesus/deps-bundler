@@ -3,6 +3,8 @@
 [![NPM][nodei-image]][nodei-url]
 
 # deps-bundler
+
+[![Join the chat at https://gitter.im/avesus/deps-bundler](https://badges.gitter.im/avesus/deps-bundler.svg)](https://gitter.im/avesus/deps-bundler?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 Simplest javascript web bundler based on module-deps. Supports file changes watch and auto page reload. Also bundles all assets into a HTML file and creates wonderful debbugable source maps.
 
 # Documentation
