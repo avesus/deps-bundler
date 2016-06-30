@@ -11,7 +11,10 @@ Note: Work in progress, alpha-stability.
 
 ## Usage
 
-`node ./node_modules/deps-bundler --entry entry.js`
+`node ./node_modules/deps-bundler --watch --output index.html entry.js`
+
+## API
+WIP
 
 
 [npm-url]: https://www.npmjs.com/package/deps-bundler

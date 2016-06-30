@@ -101,7 +101,8 @@ function bundle (entryPath, sourceMapShiftLines, onBuildComplete) {
 };
 
 
-module.exports.bundleWatch = function bundleWatch (entryPath, sourceMapShiftLines, onBuildComplete) {
+module.exports.bundleWatch = bundleWatch;
+function bundleWatch (entryPath, sourceMapShiftLines, onBuildComplete) {
 
   var watcher = chokidar.watch([], {persistent: true})
     .on('change', rebuild)
