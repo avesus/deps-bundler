@@ -1,4 +1,4 @@
-[![NPM version][npm-image]][npm-url] [![Gitter chat][gitter-image]][gitter-url] [![Downloads][downloads-image]][downloads-url]
+[![NPM version][npm-image]][npm-url] [![Gitter chat][gitter-image]][gitter-url]
 
 [![NPM][nodei-image]][nodei-url]
 
@@ -11,4 +11,17 @@ Note: Work in progress, alpha-stability.
 
 ## Usage
 
-'node ./node_modules/deps-bundler --entry entry.js'
+`node ./node_modules/deps-bundler --entry entry.js`
+
+
+[npm-url]: https://www.npmjs.com/package/deps-bundler
+[npm-image]: https://img.shields.io/npm/v/deps-bundler.svg
+
+
+[nodei-image]: https://nodei.co/npm/deps-bundler.png?downloads=true&downloadRank=true&stars=true
+[nodei-url]: https://www.npmjs.com/package/deps-bundler
+
+
+[gitter-url]: https://gitter.im/avesus/deps-bundler
+[gitter-image]: https://img.shields.io/badge/gitter-deps-bundler%2Fdeps-bundler-brightgreen.svg
+
