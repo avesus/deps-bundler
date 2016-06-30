@@ -12,6 +12,8 @@
 // of API.
 // Use caching to prevent re-reading of files if nothing changed,
 // only track changed files.
+// Build and include in bundled map the source map for the
+// browser require script require-script.js.
 
 var argv = require('optimist').argv;
 
