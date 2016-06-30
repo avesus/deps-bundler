@@ -29,6 +29,8 @@ var fs = require('fs');
 
 var depsTree = require('./lib/deps-tree');
 
+var browserRequireScript = fs.readFileSync(__dirname + '/browser-scripts/require-script.js');
+
 var watcher = chokidar.watch([], {persistent: true})
   .on('change', buildAll)
   .on('unlink', buildAll)
@@ -109,47 +111,7 @@ for (var fileIndex = 0; fileIndex < deps.order.length; ++fileIndex) {
 
 combinedHtml += "};\n";
 
-combinedHtml += "var modules = {};\
-\
-  function regModule (path, loader, deps) {\
-    modules[path] = {\
-      module: {\
-        filename: path,\
-        exports: {}\
-      },\
-      loader: loader,\
-      deps: deps\
-    };\
-  }\
-\
-  function loadModule (resolvedFullPath) {\
-    var moduleDesc = modules[resolvedFullPath];\
-    var module = moduleDesc.module;\
-    if (!module.loaded && !module._loading) {\
-      module._loading = true;\
-      moduleDesc.loader(module.exports,\
-        function require (modulePath) {\
-          var resolvedFullPath = moduleDesc.deps[modulePath];\
-          if (resolvedFullPath) {\
-            return loadModule(resolvedFullPath);\
-          } else {\
-            throw('Builtin modules are unsupported or path not found');\
-          }\
-        },\
-        module, module.filename);\
-\
-      module._loading = false;\
-      module.loaded = true;\
-    }\
-\
-    return module.exports;\
-  }\
-\
-  Object.keys(modulesInfo).forEach(function(modulePath) {\
-    var moduleInfo = modulesInfo[modulePath];\
-    regModule(modulePath, moduleInfo[1], moduleInfo[0]);\
-  });";
-
+combinedHtml += browserRequireScript;
 
 console.log(sinceLine);
 
