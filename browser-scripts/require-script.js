@@ -1,3 +1,4 @@
+var global = window;
 
 var modules = {};
 

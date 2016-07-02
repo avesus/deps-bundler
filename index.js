@@ -62,30 +62,153 @@ if (require.main === module) {
 // an array of previous lines containing require() calls
 // and output such array for caching.
 // TODO 2: remove this function to file
-function lineBreakCount (str) {
+function lineBreakCount (str, previousRequireLines) {
+
+  var lineBreaks = 0;
+
+  function old () {
   try {
-    return((str.match(/[^\n]*\n[^\n]*/gi).length));
-  } catch(e) {
-    return 0;
+    lineBreaks = ((str.match(/[^\n]*\n[^\n]*/gi).length));
+  } catch (e) {
+    
   }
+
+  return {lineBreaks: lineBreaks,
+      stripeLines: [],
+      newRequireLines: {},
+      requireDiffers: false
+    };
+  }
+
+
+  var strLen = str.length;
+
+  var state = {
+    commentedLine: false,
+    trackComment: 0,
+    checkLineForSourceMappingUrl: false,
+    checkLineForRequire: false
+  };
+
+  var lineStart = 0;
+
+  var line = '';
+  var char = '';
+
+  var stripeLines = [];
+  var newRequireLines = {};
+
+  var requireDiffers = false;
+
+  for (var pos = 0; pos <= strLen; ++pos) {
+
+    if (pos !== strLen) {
+      char = str[pos];
+    } else {
+      char = '\0';
+    }
+
+    switch (char) {
+
+    case '\n':
+    case '\0':
+	++lineBreaks;
+
+      if (state.checkLineForSourceMappingUrl) {
+        line = str.substring(lineStart, pos);
+        if (/[#@] sourceMappingURL/.test(line)) {
+          stripeLines.push({from: lineStart, to: pos});
+        }
+        state.checkLineForSourceMappingUrl = false;
+
+      } else if (state.checkLineForRequire) {
+        line = str.substring(lineStart, pos);
+        if (line.indexOf('require') > -1) {
+
+          if (!requireDiffers) {
+            if (!previousRequireLines || !previousRequireLines[line]) {
+              requireDiffers = true;
+            }
+          }
+     
+          if (requireDiffers) {
+            newRequireLines[line] = lineBreaks;
+          }
+        }
+      }
+
+      state.checkLineForRequire = false;
+      state.commentedLine = false;
+      lineStart = pos + 1;
+      break;
+
+    case '#':
+      if (state.commentedLine) {
+        state.checkLineForSourceMappingUrl = true;
+      }
+      break;
+
+    case 'r':
+      if (!state.commentedLine) {
+        state.checkLineForRequire = true;
+      }
+      break;
+
+    case '/':
+
+      if (state.trackComment) {
+        state.commentedLine = true;
+        state.trackComment = false;
+      } else if (!state.commentedLine) {
+        state.trackComment = true;
+      }
+      break;
+
+    default:
+
+      state.trackComment = false;
+    }
+  }
+
+  return {lineBreaks: lineBreaks - 1,
+      stripeLines: stripeLines,
+      newRequireLines: newRequireLines,
+      requireDiffers: requireDiffers
+    };
 }
 
+var prevLinesCache = {};
+
 module.exports.bundle = bundle;
-function bundle (entryPath, sourceMapShiftLines, onBuildComplete) {
+function bundle (entryPath, sourceMapShiftLines, onBuildComplete, onDepFound, onDepsFound, onError) {
 
-  depsTree(entryPath)
-    .then(function (deps) {
+  depsTree(entryPath,
+    function onDependencyFound (dep) {
+      onDepFound(dep)
+    },
 
+    function onComplete (deps) {
+
+      onDepsFound(deps);
+
+      // TODO: Run this on watched files instead of dependencies
+      // to detect dramatical changes (new require calls).
       for (var fileIndex = 0; fileIndex < deps.order.length; ++fileIndex) {
-        // Uncomment to debug module line numbers
-        // console.log(sinceLine + 2);
         var moduleDesc = deps.deps[deps.order[fileIndex]];
 
-        // Strip source map comments
-        // TODO: move this to lineBreakCount function along with require() calls matcher.
-        moduleDesc.stripedSource = moduleDesc.source.substring(0, moduleDesc.source.lastIndexOf("\n"));
+        var fileAnalizysReport = lineBreakCount(moduleDesc.source, prevLinesCache[moduleDesc.file]);
+        if (fileAnalizysReport.requireDiffers) {
+          prevLinesCache[moduleDesc.file] = fileAnalizysReport.newRequireLines;
+        }
 
-        moduleDesc.lineBreakCount = lineBreakCount(moduleDesc.stripedSource);
+        moduleDesc.lineBreakCount = fileAnalizysReport.lineBreaks;
+
+        if (fileAnalizysReport.stripeLines[0]) {
+          moduleDesc.stripedSource = moduleDesc.source.substring(0, fileAnalizysReport.stripeLines[0].from);
+        } else {
+          moduleDesc.stripedSource = moduleDesc.source;
+        }
+ 
       }
 
       // TODO: use streams and put module-by-module.
@@ -93,13 +216,22 @@ function bundle (entryPath, sourceMapShiftLines, onBuildComplete) {
       var result = buildBundleJs(entryPath, deps, sourceMapShiftLines);
 
       onBuildComplete(result.scriptBody, result.sourceMap, deps.files);
+    },
 
-    })
-    .catch(function (err) {
+    function onError (err) {
       console.log('Error', err);
+      process.exit(0);
     });
 };
 
+function formatTime (time) {
+  return time
+    .toISOString()
+    .split('T')
+    [1]
+    .split('.')
+    [0];
+}
 
 module.exports.bundleWatch = bundleWatch;
 function bundleWatch (entryPath, sourceMapShiftLines, onBuildComplete) {
@@ -112,19 +244,41 @@ function bundleWatch (entryPath, sourceMapShiftLines, onBuildComplete) {
 
   function rebuild () {
 
-    console.log('Rebuilding...');
+    var startedAt = new Date();
+    var depsFoundAt = startedAt;
+
+    console.log('\nScanning and bundling dependencies of\n  ' + entryPath + '...\n');
     watcher.unwatch(watchFileList);
 
-    bundle(entryPath, sourceMapShiftLines, function onBuildCompleteWatch (scriptBody, sourceMap, allFiles) {
+    bundle(entryPath, sourceMapShiftLines,
+      function onBuildCompleteWatch (scriptBody, sourceMap, allFiles) {
         // TODO: instead of allFiles, supply
         // with added and removed files.
 
-        console.log('Rebuild complete.');
+        var completeAt = new Date();
+
+        console.log('\nJoin: ' +
+          (completeAt.valueOf() - depsFoundAt.valueOf()) / 1000.0 + ' sec');
+
+        console.log('\n' + formatTime(completeAt) + ':  built complete in ' +
+          (completeAt.valueOf() - startedAt.valueOf()) / 1000.0 + ' sec');
 
         onBuildComplete(scriptBody, sourceMap);
 
         watcher.add(allFiles);
         watchFileList = allFiles;
+      },
+      function onDepFound (dep) {
+        watcher.add(dep.file);
+        console.log('  ' + dep.file);
+      },
+      function onDepsFound (deps) {
+        depsFoundAt = new Date();
+        console.log('\nScan: ' +
+          (depsFoundAt.valueOf() - startedAt.valueOf()) / 1000.0 +' sec');
+      },
+      function onError (error) {
+        console.log(error);
       });
   }
 
