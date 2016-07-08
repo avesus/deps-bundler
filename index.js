@@ -52,142 +52,20 @@ if (require.main === module) {
   }
 }
 
-
-// TODO:
-// this function should:
-//   a) calculate count of lines in source file;
-//   b) strip source map comment;
-//   c) detect lines changes containing require() calls.
-// For the last case, this function should be supplied with
-// an array of previous lines containing require() calls
-// and output such array for caching.
-// TODO 2: remove this function to file
-function lineBreakCount (str, previousRequireLines) {
-
-  var lineBreaks = 0;
-
-  function old () {
-  try {
-    lineBreaks = ((str.match(/[^\n]*\n[^\n]*/gi).length));
-  } catch (e) {
-    
-  }
-
-  return {lineBreaks: lineBreaks,
-      stripeLines: [],
-      newRequireLines: {},
-      requireDiffers: false
-    };
-  }
-
-
-  var strLen = str.length;
-
-  var state = {
-    commentedLine: false,
-    trackComment: 0,
-    checkLineForSourceMappingUrl: false,
-    checkLineForRequire: false
-  };
-
-  var lineStart = 0;
-
-  var line = '';
-  var char = '';
-
-  var stripeLines = [];
-  var newRequireLines = {};
-
-  var requireDiffers = false;
-
-  for (var pos = 0; pos <= strLen; ++pos) {
-
-    if (pos !== strLen) {
-      char = str[pos];
-    } else {
-      char = '\0';
-    }
-
-    switch (char) {
-
-    case '\n':
-    case '\0':
-	++lineBreaks;
-
-      if (state.checkLineForSourceMappingUrl) {
-        line = str.substring(lineStart, pos);
-        if (/[#@] sourceMappingURL/.test(line)) {
-          stripeLines.push({from: lineStart, to: pos});
-        }
-        state.checkLineForSourceMappingUrl = false;
-
-      } else if (state.checkLineForRequire) {
-        line = str.substring(lineStart, pos);
-        if (line.indexOf('require') > -1) {
-
-          if (!requireDiffers) {
-            if (!previousRequireLines || !previousRequireLines[line]) {
-              requireDiffers = true;
-            }
-          }
-     
-          if (requireDiffers) {
-            newRequireLines[line] = lineBreaks;
-          }
-        }
-      }
-
-      state.checkLineForRequire = false;
-      state.commentedLine = false;
-      lineStart = pos + 1;
-      break;
-
-    case '#':
-      if (state.commentedLine) {
-        state.checkLineForSourceMappingUrl = true;
-      }
-      break;
-
-    case 'r':
-      if (!state.commentedLine) {
-        state.checkLineForRequire = true;
-      }
-      break;
-
-    case '/':
-
-      if (state.trackComment) {
-        state.commentedLine = true;
-        state.trackComment = false;
-      } else if (!state.commentedLine) {
-        state.trackComment = true;
-      }
-      break;
-
-    default:
-
-      state.trackComment = false;
-    }
-  }
-
-  return {lineBreaks: lineBreaks - 1,
-      stripeLines: stripeLines,
-      newRequireLines: newRequireLines,
-      requireDiffers: requireDiffers
-    };
-}
+var scanFileForMapsLinesRequires = require('./lib/scan-file.js');
 
 var prevLinesCache = {};
 
 module.exports.bundle = bundle;
-function bundle (entryPath, sourceMapShiftLines, onBuildComplete, onDepFound, onDepsFound, onError) {
+function bundle (entryPath, cacheOpts, sourceMapShiftLines, onBuildComplete, onDepFound, onDepsFound, onError) {
 
   depsTree(entryPath,
+    cacheOpts,
     function onDependencyFound (dep) {
       onDepFound(dep)
     },
 
-    function onComplete (deps) {
+    function onComplete (deps, newCacheOpts) {
 
       onDepsFound(deps);
 
@@ -196,7 +74,7 @@ function bundle (entryPath, sourceMapShiftLines, onBuildComplete, onDepFound, on
       for (var fileIndex = 0; fileIndex < deps.order.length; ++fileIndex) {
         var moduleDesc = deps.deps[deps.order[fileIndex]];
 
-        var fileAnalizysReport = lineBreakCount(moduleDesc.source, prevLinesCache[moduleDesc.file]);
+        var fileAnalizysReport = scanFileForMapsLinesRequires(moduleDesc.source, prevLinesCache[moduleDesc.file]);
         if (fileAnalizysReport.requireDiffers) {
           prevLinesCache[moduleDesc.file] = fileAnalizysReport.newRequireLines;
         }
@@ -213,9 +91,13 @@ function bundle (entryPath, sourceMapShiftLines, onBuildComplete, onDepFound, on
 
       // TODO: use streams and put module-by-module.
       // On stream's end write require() code for browser.
+      var startedAt = new Date();
       var result = buildBundleJs(entryPath, deps, sourceMapShiftLines);
+      var concatenatedAt = new Date();
+      console.log('\nGather Source Maps And Concatenate: ' +
+        (concatenatedAt.valueOf() - startedAt.valueOf()) / 1000.0 + ' sec');
 
-      onBuildComplete(result.scriptBody, result.sourceMap, deps.files);
+      onBuildComplete(result.scriptBody, result.sourceMap, deps.files, newCacheOpts);
     },
 
     function onError (err) {
@@ -242,6 +124,8 @@ function bundleWatch (entryPath, sourceMapShiftLines, onBuildComplete) {
 
   var watchFileList = [];
 
+  var cacheOpts = {};
+
   function rebuild () {
 
     var startedAt = new Date();
@@ -250,8 +134,11 @@ function bundleWatch (entryPath, sourceMapShiftLines, onBuildComplete) {
     console.log('\nScanning and bundling dependencies of\n  ' + entryPath + '...\n');
     watcher.unwatch(watchFileList);
 
-    bundle(entryPath, sourceMapShiftLines,
-      function onBuildCompleteWatch (scriptBody, sourceMap, allFiles) {
+    bundle(entryPath, cacheOpts, sourceMapShiftLines,
+      function onBuildCompleteWatch (scriptBody, sourceMap, allFiles, newCacheOpts) {
+
+        cacheOpts = newCacheOpts;
+
         // TODO: instead of allFiles, supply
         // with added and removed files.
 

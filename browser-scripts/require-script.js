@@ -1,4 +1,7 @@
 var global = window;
+var process = {
+  env: {}
+};
 
 var modules = {};
 

@@ -16,6 +16,14 @@ Note: Work in progress, alpha-stability.
 ## API
 WIP
 
+## NPM packages source mapping
+
+Packages written not in JavaScript supported by modern browsers and Node should contain source maps to allow debug your code when you use modules written in such languages.
+Supplying:
+
+ - Source maps near compiled js in the same folder
+ - Inlined source maps
+ - No source maps at all
 
 [npm-url]: https://www.npmjs.com/package/deps-bundler
 [npm-image]: https://img.shields.io/npm/v/deps-bundler.svg
