@@ -59,6 +59,25 @@ module.exports = `
 `
 ```
 
+After extracting all your CSS, they get merged to extract common things, so instead of 
+```
+.Button {
+  color: gray;
+}
+.EditBox {
+  color: gray;
+}
+```
+You get
+```
+.a {
+  color: gray;
+}
+```
+and if you have other statements, the class provided will be written as `a Button` and `a EditBox`
+at the place of their use. Of course, common things extraction is an optimization step,
+and it's very unlikely that your component classes will have those names after optimization: `a b` and `a c`.
+
 # Why
 
 In December 2017 I get tired of using webpack. A year and five months ago I was working on
