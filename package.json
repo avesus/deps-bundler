@@ -1,7 +1,7 @@
 {
-  "name": "deps-bundler",
+  "name": "tuffbundler",
   "version": "1.0.2",
-  "description": "Simplest javascript web bundler based on module-deps",
+  "description": "Simple and fast JavaScript web bundler for Single Page Applications",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
