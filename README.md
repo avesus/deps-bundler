@@ -41,6 +41,22 @@ module.exports = `
   height: ${ branding.logoHeight }px;
   background-size: ${ branding.logoWidth }px ${ branding.logoHeight }px;
 }
+
+.Button > div:first-child {
+  color: blue;
+}
+
+@media (min-height: 680px), screen and (orientation: portrait) {
+  .Button {
+    width: 100%;
+  }
+  .Button > div {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+`
 ```
 
 # Why
