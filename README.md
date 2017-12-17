@@ -6,7 +6,42 @@
 
 Main purpose of tuffbundler is extremely, insanely, simple. It's like Browserify.
 It's like webpack without config files. It takes one file (only one, we do not support
-and never will be supporting multiple "vendor" entry points and multiple chunks).
+and never will be supporting multiple "vendor" entry points and multiple chunks),
+finds all `import`'s and `require()`'s in it, walks thru all the dependency tree,
+keeps watching over all files in the tree (when loaded as API from your dev server),
+re-bundling and minifying after changes, notifying your server to tell connected
+clients to get new changes.
+
+It supports only _one_ advanced import - `.css.js` files. For those imports,
+tuffbundler uses Tuff CSSinJS module to take all CSS code exported as simple strings
+from those `.css.js` files, and then rewrite their main class name into something different
+(on production), or just to convert your statement where you importing your `.css.js` file
+straight into class name string.
+
+The main limitation of our CSS in JS approach is that a single`.css.js` file
+can have only CSS declarations for one CSS class.
+You can provide tons of combinations, but a single CSS in JS must refer
+only one component intended to style.
+
+Example:
+```
+const branding = require('./../common/branding')
+module.exports = `
+.Button {
+  width: 100px;
+  color: ${ branding.mainButtonColor };
+}
+.Button.raised {
+  color: ${ branding.highlightButtonsColor };
+}
+
+.Button > div {
+  background: url(\'data:image/svg+xml;utf8,${ branding.logoSvg }\') no-repeat;
+  width: ${ branding.logoWidth }px;
+  height: ${ branding.logoHeight }px;
+  background-size: ${ branding.logoWidth }px ${ branding.logoHeight }px;
+}
+```
 
 # Why
 
