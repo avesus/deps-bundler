@@ -1,6 +1,6 @@
 {
   "name": "deps-bundler",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Simplest javascript web bundler based on module-deps",
   "main": "index.js",
   "scripts": {
