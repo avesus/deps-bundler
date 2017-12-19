@@ -206,12 +206,104 @@ which will have the same time of occurence on server side.
 
 # Features
 
-### Opinionated for Single Page Single Bundle Web Applications
+### Opinionated for Single Page Web Applications
+
+## Generation of Common Code Parts
+
+### Theory of Common Code Parts
+
+Common code parts may be intended for multiple different goals,
+often confused by developers as being parts of one goal:
+
+1. Sharing common code between multiple isolated HTML pages.
+2. Unloading of one part of a very large web app and loading of another, but sharing common code.
+3. Progressive loading of a large app's JavaScript and CSS in the background.
+4. Delayed loading in the background of yet invisible parts, usually other routes, to speed up parsing of the initial page JavaScript
+5. Caching of rarely changed code and parallelization of parsing.
+
+
+#### 1. Sharing common code between multiple isolated HTML pages
+
+Sharing common code between multiple isolated HTML pages and delayed loading
+may be implemented using the same approach because of their virtue of
+having shared common JavaScript and CSS.
+
+#### 2. Unloading of one part of a very large web app and loading of another, but sharing common code
+
+After your video editor is loaded, if you have some super heavy activities or dialogs,
+it's higly advised to switch to those as another sub apps. That means that all JavaScript and CSS
+which is not used in those heavy activities must be unloaded (only shared parts should be preserved).
+
+After main app is loaded, to save memory it's highly advised to load all related
+JavaScript and HTML assets for heavy dialogs and activities only when those are activated,
+and unload those immediately after user closes them. If you have a desire to pre-cache
+some dialogs to let faster return back, consider adding those dialogs as parts of your app.
+You yet can use the technique #3 to postpone loading of those complex dialogs in the background
+improving main page startup time.
+
+#### 3. Progressive loading of a large app's JavaScript and CSS in the background.
+
+Web pages are intended to be displayed gradually. A background color and a logo come first,
+maybe a loaderanimation may be displayed shortly after. Then a basic frame or current page/screen route.
+And all other routes may be downloaded in the background before user changes the route.
+
+The graduality here is of two different hierarchies: a) gradual loading as a thing
+(it's expected that UI will reflect those steps of this phase), and
+b) invisible parts delayed loading - just to display the main app faster to avoid parsing
+of the whole JavaScript and the bigger CSS at startup.
+
+#### 4. Delayed loading in the background of yet invisible parts, usually other routes, to speed up parsing of the initial page JavaScript
+
+JavaScript and CSS for all other routes must be downloaded here for the core app.
+If your app is too huge, like an video editor, parts not visible at startup may be loaded
+in the background, but intention here is to load all core part of your app.
+Switch to super heavy dialogs and activities must be implemented as a switch between apps,
+instead of loading of even more assets. The switch is performed by other technique (#2).
+
+#### 5. Caching of rarely changed code and parallelization of parsing
+
+This is a core technique even for very simple apps.
+Put all your framework and library code into one JS,
+CSS resets and rarely changed CSS into a corresponding CSS file,
+then put all your app code into its own JS and CSS, correspondingly.
+The load time over modern HTTP/2 will be not compromized, and parsing will happen faster,
+as our tests showed, even on slow Android devices.
+
+Note that in some cases, when library / framework code changes very frequently,
+the technique is yet feasible because browsers somehow parallelize parsing of JavaScript.
+
+The problem here is when a part of your app (for example, a root view) is changed rarely,
+but depends on a frequently changed view code, then the rarely changed code should
+wait when that frequently changed part of code will be loaded.
+The best approach here is to use the technique #3 to gradually display the view in such a way
+that the view contained in your frequently changed code will register itself in the already presented parent view.
+
+Note that it's in principle impossible to implement that using another technique,
+because, logically, your root view is already there and ready to be displayed.
+And it will render all components which rarely change because those will be available
+in the same bundle next to the root view.
+
+But a frequently changing child view is nothing but progressively available component,
+and it definitely may be loaded in the background to improve caching.
+
+From other case, if a child view is a rarely changed component, its code will be loaded and parsed,
+and will stay there and wait until its parent will activate it, so no special postponed imports
+will be necessary in that case.
+
+### Common Code Parts Generation Support
+
+Programmatic control of progressively loaded or postponed resources is available in all modern browsers:
+https://pie.gd/test/script-link-events/
+
+The bundler may be configured to reach each of the specified goals separately.
+
+#### Opinions Description
+
 deps-bundler is a very opinionated bundler to keep all features highly optimized and my target users
 absolutely satisfied. We will *never* support multiple entry points and common chunks or other common
 code extractors, cached vendor package bundles, new cool cached optimized web standards promoted
 `<script type="module">` and `import` in the browser-side code.
-Things do change so often in all code parts, and networks are fast enough to transfer your bundle
+Things do change very frequently in all code parts, and networks are fast enough to transfer your bundle
 over packaged with React, Tuff, or other trendy framework, instead of loading only your cool updated code.
 
 Loading is fast.
@@ -238,9 +330,19 @@ using hashed persistent caching, and client app js was downloaded each time page
 and _compared_ the performance with just one single "bundle". We also compared different client code
 sizes comparing to the "vendor" part.
 
-Doing startup time performance measurements, we've discovered that one big JavaScript file
-is loaded and parsed faster than a pair with a pre-cached "vendor" file and a tiny, `console.log('hi')`, app file.
-[TODO: PUT RESULTS HERE]
+We've discovered that reading from cache on mobile devices is ridiculously slow, about 1 ms per KB.
+
+2 big js from cache: 350 - 450 - 525 - 575 ms (but sometimes it can take up to 5(!!!) seconds just to read a file from mobile cache)
+2 big js from network: 550 - 575 - 625 - 650 - 800 ms
+a byte was changed in the smaller file: 380 - 430 - 550 - 575 - 600 ms
+
+One big file: 650 - 675 - 700 - 850 ms (no magic here, expectable result - the same as 2 split files, because mobile is slow!)
+A byte was changed: 600 ms (obviously. the work of network compression, but we expect the same result).
+One big file from cache: 425 (from RAM cache) - 475 (disk cache) - 550 - 575 ms
+
+Doing web app startup time performance measurements, we've discovered that one big JavaScript file
+is loaded and parsed slower than a pair of js files.
+If only one of the files was changed, the app loads faster.
 
 Another "feature" was stated by HTTP/2 and browser developers that many content-types are delayed
 when those are all bundled in one file and cannot be processed in parallel.
@@ -281,10 +383,12 @@ but in theory, it's possible to build those and configure correspondingly.
 We'll provide possible solutions in support tickets. Just file an issue if you need that functionality.
 Advised nginx config is provided to ensure that caching will work perfectly, and API endpoints will be accessed seamlessly.
 
- It gets `index.html` template (we're highly recommend using our standard template),
+It gets `index.html` template (we're highly recommend using our standard template),
 gets `preloader.css` code, gets `preloader.js` code (awesome tool to establish a WebSocket connection
 as fast as possible and get `load` event instantly - of course it can break some old web search engines,
-so use with caution). 
+so use with caution).
+
+#### 2. Bundling main assets
 
 #### Watching Mode
 
@@ -336,6 +440,31 @@ source maps for all your `.css.js` files!
 The concatenated CSS is packaged in the bundle (to prevent browsers from creating another TCP connection),
 and inserted each time your JavaScript module containing `require()` of a `.css.js` file
 imported in any other JavaScript module, so, lazily injecting new CSS declarations.
+
+
+Another opinion: NPM modules are JavaScript modules. Not ES2037+ modules. Not TypeScript modules.
+Not CoffeeScript or ClojureScript.
+
+So, if you're an author of an NPM package, your main index.js and all files it depends
+better should be transpiled to JavaScript supported by modern browsers and Node.js,
+or even to ES5, if your code is supposed to cover everybody in the world with old cheap devices.
+
+The bundler works only with those JavaScript files. The only one, single, sensitive, ugly, exception
+was made to allow including `.css.js` files. But if you forget to include the preparser, those
+will be imported anyway, generate class name as their module.exports value, and adds runtime code
+to inject CSS to your styles, so nothing will be broken in plain old JavaScript `require()`.
+
+The preparsing of `.css.js` files implemented by an extension of the bundler, which sets callback
+on each `.css.js` file found to collect all CSS from your project. Then it generates CSS inserting code
+which puts your CSS into DOM. Then bundler bundles everything together (it has that special post step,
+letting a bundling extension to supply an additional dependency).
+
+CSS in JS as a string: 250 - 350 - 700 ms
+Small CSS in JS as a string: 175 (RAM) - 250 - 275 - 300 - 350 ms (both first and all subsequent loads)
+Small CSS as a reference from HTML: 175 (RAM) - 200 - 225 - 250 - 325 ms (can timeout for one of the assets!)
+
+Big CSS in JS as a string: 300 (rare) - 350 - 375 (often) - 425 - 450 - 575 - 600 - 675 ms
+Big CSS as a reference from HTML: 275 - 325 (cached) - 375 ms
 
 
 
